@@ -9,33 +9,41 @@
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet"
         integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
-
+    <style>
+        .nav-link {
+            cursor: pointer;
+        }
+    </style>
     <title>Hello, world!</title>
 </head>
 
 <body>
     <div class="container">
 
-        <div id="app"> </div>
 
         <ul class="nav nav-tabs">
             <li class="nav-item">
-                <div class="nav-link active" aria-current="page">Active</a>
+                <div class="nav-link active" id="home-link">Home</a>
             </li>
             <li class="nav-item">
-                <div class="nav-link" >Link</a>
+                <div class="nav-link" id="search-link">Search Customer</div></a>
+            </li>
+            <li class="nav-item">
+                <div class="nav-link" id="add-customer-link">Add Customer</a>
             </li>
             <!-- Bootstrap Template
-            <li class="nav-item">
-              <a class="nav-link" href="#">Link</a>
-            </li>
-             -->
+                        <li class="nav-item">
+                            <a class="nav-link" href="#">Link</a>
+                        </li>
+                    -->
             <li class="nav-item">
                 <div class="nav-link disabled" tabindex="-1" aria-disabled="true">Disabled</a>
             </li>
         </ul>
 
     </div>
+
+    <div id="app"> </div>
 
     <!-- Optional JavaScript; choose one of the two! -->
 
@@ -52,7 +60,156 @@
 
     <script>
 
+        var data;
 
+        function loadView(options) {
+            const id = options.id || "app";
+            const callback = options.callback || function () { };
+            google.script.run.withSuccessHandler(html => {
+                document.getElementById(id).innerHTML = html;
+                callback(options.params || null);
+            })[options.func]();
+        }
+
+        function setDataForSearch() {
+            google.script.run.withSuccessHandler(dataReturned => {
+                data = dataReturned.slice();
+            }).getDataForSearch();
+        }
+
+        function search() {
+            const searchInput = document.getElementById("search-input").value.toString().toLowerCase().trim();
+            const searchWords = searchInput.split(/\s+/);
+            const searchColumns = [1, 2];
+
+            const searchResults = searchInput === "" ? [] : data.filter(r => {
+                return searchWords.every(word => {
+                    return searchColumns.some(colIndex => {
+                        return r[colIndex].toString().toLowerCase().indexOf(word) !== -1
+                    });
+                });
+            });
+
+            const searchResultsBox = document.getElementById("search-results");
+            const templateBox = document.getElementById("row-template");
+            const template = templateBox.content;
+
+            searchResultsBox.innerHTML = "";
+
+            searchResults.forEach(r => {
+                const row = template.cloneNode(true);
+                const customerIdColumn = row.querySelector(".customerId");
+                const firstNameColumn = row.querySelector(".firstName");
+                const lastNameColumn = row.querySelector(".lastName");
+                const deleteButton = row.querySelector(".delete-button");
+                const editButton = row.querySelector(".edit-button");
+
+                customerIdColumn.textContent = r[0];
+                deleteButton.dataset.customerId = r[0];
+                editButton.dataset.customerId = r[0];
+                firstNameColumn.textContent = r[1];
+                lastNameColumn.textContent = r[2];
+
+                searchResultsBox.appendChild(row)
+            });
+        }
+
+        function displayConfirmationDelete(event) {
+            if (event.target.dataset.buttonState === "delete") {
+                event.target.previousElementSibling.classList.remove("d-none");
+                event.target.textContent = "Cancel";
+                event.target.dataset.buttonState = "cancel";
+            }
+            else {
+                event.target.previousElementSibling.classList.add("d-none");
+                event.target.textContent = "Delete";
+                event.target.dataset.buttonState = "delete";
+            }
+        }
+
+        function deleteCustomer(event) {
+            const custId = event.target.dataset.customerId.toString().toLowerCase();
+            google.script.run.withSuccessHandler(() => {
+                event.target.closest(".result-box").remove();
+                const ids = data.map(r => r[0].toString().toLowerCase());
+                const index = ids.indexOf(custId);
+                data.splice(index, 1);
+            }).deleteById(custId);
+        }
+
+        function afterEditViewLoads(params) {
+            // custId: event.target.dataset.customerId
+            document.getElementById("customer-id").value = params.custId;
+            google.script.run.withSuccessHandler(customerInfo => {
+                document.getElementById("first-name").value = customerInfo.firstName;
+                document.getElementById("last-name").value = customerInfo.lastName;
+                document.getElementById("phone-number").value = customerInfo.phoneNumber;
+
+            }).getCustomerById(params.custId);
+        }
+
+        function editCustomer() {
+            const customerInfo = {};
+            customerInfo.id = document.getElementById("customer-id").value;
+            customerInfo.firstName = document.getElementById("first-name").value;
+            customerInfo.lastName = document.getElementById("last-name").value;
+            customerInfo.phoneNumber = document.getElementById("phone-number").value;
+            google.script.run.withSuccessHandler(result => {
+                document.getElementById("save-success-alert").classList.remove("invisible");
+                setTimeout(() => {
+                    document.getElementById("save-success-alert").classList.add("invisible");
+                }, 4000);
+            }).editCustomerById(customerInfo);
+        }
+
+        function loadSearchView() {
+            loadView({ func: "loadSearchView", callback: setDataForSearch });
+        }
+
+        function loadAddCustomerView() {
+            loadView({ func: "loadAddCustomerView" });
+        }
+
+        function loadEditCustomerView() {
+            loadView({ func: "loadEditCustomerView" });
+        }
+
+        document.getElementById("search-link").addEventListener("click", loadSearchView);
+        document.getElementById("add-customer-link").addEventListener("click", loadAddCustomerView);
+        document.getElementById("home-link").addEventListener("click", loadEditCustomerView);
+
+        function inputEventHandler(event) {
+            if (event.target.matches("#search-input")) {
+                search();
+            }
+        }
+
+        function clickEventHandler(event) {
+            if (event.target.matches(".delete-button")) {
+                deleteCustomer(event);
+            }
+
+            if (event.target.matches(".before-delete-button")) {
+                displayConfirmationDelete(event);
+            }
+
+            if (event.target.matches(".edit-button")) {
+                loadView({
+                    func: "loadEditCustomerView",
+                    callback: afterEditViewLoads,
+                    params: {
+                        custId: event.target.dataset.customerId
+                    }
+                });
+            }
+
+            if (event.target.matches("#save-changes")) {
+                editCustomer(event);
+            }
+        }
+
+        document.getElementById("app").addEventListener("input", inputEventHandler);
+        document.getElementById("app").addEventListener("click", clickEventHandler);
 
     </script>
 </body>

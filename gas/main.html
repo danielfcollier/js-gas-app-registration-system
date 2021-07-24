@@ -8,33 +8,39 @@
 
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
-
+    <style>.nav-link {
+            cursor: pointer;
+        }</style>
     <title>Hello, world!</title>
 </head>
 
 <body>
     <div class="container">
 
-        <div id="app"> </div>
 
         <ul class="nav nav-tabs">
             <li class="nav-item">
-                <div class="nav-link active" aria-current="page">Active
+                <div class="nav-link active" id="home-link">Home
             </div></li>
             <li class="nav-item">
-                <div class="nav-link">Link
+                <div class="nav-link" id="search-link">Search Customer</div>
+            </li>
+            <li class="nav-item">
+                <div class="nav-link" id="add-customer-link">Add Customer
             </div></li>
             <!-- Bootstrap Template
-            <li class="nav-item">
-              <a class="nav-link" href="#">Link</a>
-            </li>
-             -->
+                        <li class="nav-item">
+                            <a class="nav-link" href="#">Link</a>
+                        </li>
+                    -->
             <li class="nav-item">
                 <div class="nav-link disabled" tabindex="-1" aria-disabled="true">Disabled
             </div></li>
         </ul>
 
     </div>
+
+    <div id="app"> </div>
 
     <!-- Optional JavaScript; choose one of the two! -->
 
@@ -47,11 +53,159 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.min.js" integrity="sha384-cVKIPhGWiC2Al4u+LWgxfKTRIcfu0JTxR+EQDz/bgldoEyl4H0zUF0QKbrJ0EcQF" crossorigin="anonymous"></script>
     -->
 
-    <script>
+    <script>var data;
 
+function loadView(options) {
+  var id = options.id || "app";
 
+  var callback = options.callback || function () {};
 
-    </script>
+  google.script.run.withSuccessHandler(function (html) {
+    document.getElementById(id).innerHTML = html;
+    callback(options.params || null);
+  })[options.func]();
+}
+
+function setDataForSearch() {
+  google.script.run.withSuccessHandler(function (dataReturned) {
+    data = dataReturned.slice();
+  }).getDataForSearch();
+}
+
+function search() {
+  var searchInput = document.getElementById("search-input").value.toString().toLowerCase().trim();
+  var searchWords = searchInput.split(/\s+/);
+  var searchColumns = [1, 2];
+  var searchResults = searchInput === "" ? [] : data.filter(function (r) {
+    return searchWords.every(function (word) {
+      return searchColumns.some(function (colIndex) {
+        return r[colIndex].toString().toLowerCase().indexOf(word) !== -1;
+      });
+    });
+  });
+  var searchResultsBox = document.getElementById("search-results");
+  var templateBox = document.getElementById("row-template");
+  var template = templateBox.content;
+  searchResultsBox.innerHTML = "";
+  searchResults.forEach(function (r) {
+    var row = template.cloneNode(true);
+    var customerIdColumn = row.querySelector(".customerId");
+    var firstNameColumn = row.querySelector(".firstName");
+    var lastNameColumn = row.querySelector(".lastName");
+    var deleteButton = row.querySelector(".delete-button");
+    var editButton = row.querySelector(".edit-button");
+    customerIdColumn.textContent = r[0];
+    deleteButton.dataset.customerId = r[0];
+    editButton.dataset.customerId = r[0];
+    firstNameColumn.textContent = r[1];
+    lastNameColumn.textContent = r[2];
+    searchResultsBox.appendChild(row);
+  });
+}
+
+function displayConfirmationDelete(event) {
+  if (event.target.dataset.buttonState === "delete") {
+    event.target.previousElementSibling.classList.remove("d-none");
+    event.target.textContent = "Cancel";
+    event.target.dataset.buttonState = "cancel";
+  } else {
+    event.target.previousElementSibling.classList.add("d-none");
+    event.target.textContent = "Delete";
+    event.target.dataset.buttonState = "delete";
+  }
+}
+
+function deleteCustomer(event) {
+  var custId = event.target.dataset.customerId.toString().toLowerCase();
+  google.script.run.withSuccessHandler(function () {
+    event.target.closest(".result-box").remove();
+    var ids = data.map(function (r) {
+      return r[0].toString().toLowerCase();
+    });
+    var index = ids.indexOf(custId);
+    data.splice(index, 1);
+  }).deleteById(custId);
+}
+
+function afterEditViewLoads(params) {
+  // custId: event.target.dataset.customerId
+  document.getElementById("customer-id").value = params.custId;
+  google.script.run.withSuccessHandler(function (customerInfo) {
+    document.getElementById("first-name").value = customerInfo.firstName;
+    document.getElementById("last-name").value = customerInfo.lastName;
+    document.getElementById("phone-number").value = customerInfo.phoneNumber;
+  }).getCustomerById(params.custId);
+}
+
+function editCustomer() {
+  var customerInfo = {};
+  customerInfo.id = document.getElementById("customer-id").value;
+  customerInfo.firstName = document.getElementById("first-name").value;
+  customerInfo.lastName = document.getElementById("last-name").value;
+  customerInfo.phoneNumber = document.getElementById("phone-number").value;
+  google.script.run.withSuccessHandler(function (result) {
+    document.getElementById("save-success-alert").classList.remove("invisible");
+    setTimeout(function () {
+      document.getElementById("save-success-alert").classList.add("invisible");
+    }, 4000);
+  }).editCustomerById(customerInfo);
+}
+
+function loadSearchView() {
+  loadView({
+    func: "loadSearchView",
+    callback: setDataForSearch
+  });
+}
+
+function loadAddCustomerView() {
+  loadView({
+    func: "loadAddCustomerView"
+  });
+}
+
+function loadEditCustomerView() {
+  loadView({
+    func: "loadEditCustomerView"
+  });
+}
+
+document.getElementById("search-link").addEventListener("click", loadSearchView);
+document.getElementById("add-customer-link").addEventListener("click", loadAddCustomerView);
+document.getElementById("home-link").addEventListener("click", loadEditCustomerView);
+
+function inputEventHandler(event) {
+  if (event.target.matches("#search-input")) {
+    search();
+  }
+}
+
+function clickEventHandler(event) {
+  if (event.target.matches(".delete-button")) {
+    deleteCustomer(event);
+  }
+
+  if (event.target.matches(".before-delete-button")) {
+    displayConfirmationDelete(event);
+  }
+
+  if (event.target.matches(".edit-button")) {
+    loadView({
+      func: "loadEditCustomerView",
+      callback: afterEditViewLoads,
+      params: {
+        custId: event.target.dataset.customerId
+      }
+    });
+  }
+
+  if (event.target.matches("#save-changes")) {
+    editCustomer(event);
+  }
+}
+
+document.getElementById("app").addEventListener("input", inputEventHandler);
+document.getElementById("app").addEventListener("click", clickEventHandler);</script>
 </body>
 
 </html>

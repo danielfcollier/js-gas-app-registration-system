@@ -1,0 +1,36 @@
+<h1>Search</h1>
+
+
+<div class="mb-3">
+    <input type="text" class="form-control" id="search-input" placeholder="search...">
+</div>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th scope="col">#</th>
+            <th scope="col">First</th>
+            <th scope="col">Last</th>
+            <th scope="col"></th>
+            <th scope="col"></th>
+        </tr>
+    </thead>
+    <tbody id="search-results">
+
+    </tbody>
+</table>
+
+<template id="row-template">
+    <tr class="result-box">
+        <th class="customerId" scope="row"></th>
+        <td class="firstName"></td>
+        <td class="lastName"></td>
+        <td><button type="button" class="btn btn-outline-dark edit-button">Edit</button></td>
+        <td>
+            <div class="btn-group" role="group">
+                <button type="button" class="btn btn-danger delete-button d-none">Confirm</button>
+                <button type="button" class="btn btn-outline-dark before-delete-button" data-button-state="delete">Delete</button>
+              </div>
+        </td>
+    </tr>
+</template>
