@@ -4,10 +4,16 @@ const path = require("path");
 const dirNameServer = "server";
 const dirNameClient = "client";
 const dirNameGoogle = "gas";
+const dirNameDist = "dist";
 
-const htmlFile = "index.html";
+const dirDist= fs.readdirSync(path.resolve(__dirname, dirNameDist));
 
-fs.copyFileSync("./dist/index.html", "./gas/index.html");
+dirDist.forEach(file => {
+    fs.copyFileSync(
+        path.resolve(__dirname, dirNameDist, file),
+        path.resolve(__dirname, dirNameGoogle, file)
+    )
+});
 
 const dirServer = fs.readdirSync(path.resolve(__dirname, dirNameServer));
 

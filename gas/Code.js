@@ -1,6 +1,9 @@
 function doGet() {
-  //SpreadsheetApp.getUi();
-  //DriveApp.getRootFolder();
-  //UrlFetchApp.fetch("");
-  return HtmlService.createTemplateFromFile('index').evaluate();
-}
+    //SpreadsheetApp.getUi();
+    //DriveApp.getRootFolder();
+    //UrlFetchApp.fetch("");
+    const htmlPageTemplate = HtmlService.createTemplateFromFile('index');
+    return htmlPageTemplate.evaluate();
+  }
+  
+  
