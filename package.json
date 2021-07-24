@@ -1,0 +1,21 @@
+{
+  "name": "website-js-gas-ecommerce-registration-system",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "parcel build client/index.html --no-minify --no-cache --no-source-maps && node utils.js && clasp push",
+    "watch": "nodemon --watch client --watch server --exec \"npm run build\" --ext js,html,scss,css"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@types/google-apps-script": "^1.0.37",
+    "parcel-plugin-inliner": "^1.0.16",
+    "posthtml": "^0.16.4"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.12"
+  }
+}
