@@ -10,37 +10,47 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
     <style>.nav-link {
             cursor: pointer;
+        }
+
+        #loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 10000;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(255, 255, 255, 75%);
         }</style>
     <title>Hello, world!</title>
 </head>
 
 <body>
+
     <div class="container">
-
-
-        <ul class="nav nav-tabs">
-            <li class="nav-item">
-                <div class="nav-link active" id="home-link">Home
-            </div></li>
-            <li class="nav-item">
-                <div class="nav-link" id="search-link">Search Customer</div>
-            </li>
-            <li class="nav-item">
-                <div class="nav-link" id="add-customer-link">Add Customer
-            </div></li>
-            <!-- Bootstrap Template
+        <nav id="navigation" class="mb-3">
+            <ul class="nav nav-tabs main-nav">
+                <li class="nav-item">
+                    <div class="nav-link active" id="search-link">Find Customer</div>
+                </li>
+                <li class="nav-item">
+                    <div class="nav-link" id="add-customer-link">Add Customer
+                </div></li>
+                <!-- Bootstrap Template
                         <li class="nav-item">
                             <a class="nav-link" href="#">Link</a>
                         </li>
                     -->
-            <li class="nav-item">
-                <div class="nav-link disabled" tabindex="-1" aria-disabled="true">Disabled
-            </div></li>
-        </ul>
-
+            </ul>
+        </nav>
     </div>
 
     <div id="app"> </div>
+
+    <div id="loading" class="d-flex justify-content-center align-items-center invisible">
+        <div class="spinner-grow" style="width: 3rem; height: 3rem;" role="status">
+            <span class="sr-only"></span>
+        </div>
+    </div>
 
     <!-- Optional JavaScript; choose one of the two! -->
 
@@ -60,15 +70,19 @@ function loadView(options) {
 
   var callback = options.callback || function () {};
 
+  loadingStart();
   google.script.run.withSuccessHandler(function (html) {
     document.getElementById(id).innerHTML = html;
+    loadingEnd();
     callback(options.params || null);
   })[options.func]();
 }
 
 function setDataForSearch() {
+  loadingStart();
   google.script.run.withSuccessHandler(function (dataReturned) {
     data = dataReturned.slice();
+    loadingEnd();
   }).getDataForSearch();
 }
 
@@ -83,6 +97,7 @@ function search() {
       });
     });
   });
+  document.getElementById("search-counter").textContent = "0";
   var searchResultsBox = document.getElementById("search-results");
   var templateBox = document.getElementById("row-template");
   var template = templateBox.content;
@@ -117,6 +132,7 @@ function displayConfirmationDelete(event) {
 
 function deleteCustomer(event) {
   var custId = event.target.dataset.customerId.toString().toLowerCase();
+  loadingStart();
   google.script.run.withSuccessHandler(function () {
     event.target.closest(".result-box").remove();
     var ids = data.map(function (r) {
@@ -124,16 +140,19 @@ function deleteCustomer(event) {
     });
     var index = ids.indexOf(custId);
     data.splice(index, 1);
+    loadingEnd();
   }).deleteById(custId);
 }
 
 function afterEditViewLoads(params) {
   // custId: event.target.dataset.customerId
+  loadingStart();
   document.getElementById("customer-id").value = params.custId;
   google.script.run.withSuccessHandler(function (customerInfo) {
     document.getElementById("first-name").value = customerInfo.firstName;
     document.getElementById("last-name").value = customerInfo.lastName;
     document.getElementById("phone-number").value = customerInfo.phoneNumber;
+    loadingEnd();
   }).getCustomerById(params.custId);
 }
 
@@ -143,12 +162,36 @@ function editCustomer() {
   customerInfo.firstName = document.getElementById("first-name").value;
   customerInfo.lastName = document.getElementById("last-name").value;
   customerInfo.phoneNumber = document.getElementById("phone-number").value;
+  loadingStart();
   google.script.run.withSuccessHandler(function (result) {
     document.getElementById("save-success-alert").classList.remove("invisible");
     setTimeout(function () {
       document.getElementById("save-success-alert").classList.add("invisible");
+      document.getElementById("first-name").value = "";
+      document.getElementById("last-name").value = "";
+      document.getElementById("phone-number").value = "";
+      loadingEnd();
+      loadSearchView();
     }, 4000);
   }).editCustomerById(customerInfo);
+}
+
+function addCustomer() {
+  var customerInfo = {};
+  customerInfo.firstName = document.getElementById("first-name").value;
+  customerInfo.lastName = document.getElementById("last-name").value;
+  customerInfo.phoneNumber = document.getElementById("phone-number").value;
+  loadingStart();
+  google.script.run.withSuccessHandler(function (result) {
+    document.getElementById("first-name").value = "";
+    document.getElementById("last-name").value = "";
+    document.getElementById("phone-number").value = "";
+    document.getElementById("save-success-alert").classList.remove("invisible");
+    setTimeout(function () {
+      document.getElementById("save-success-alert").classList.add("invisible");
+    }, 4000);
+    loadingEnd();
+  }).addCustomer(customerInfo);
 }
 
 function loadSearchView() {
@@ -164,15 +207,34 @@ function loadAddCustomerView() {
   });
 }
 
-function loadEditCustomerView() {
+function loadEditCustomerView(event) {
   loadView({
-    func: "loadEditCustomerView"
+    func: "loadEditCustomerView",
+    callback: afterEditViewLoads,
+    params: {
+      custId: event.target.dataset.customerId
+    }
   });
+}
+
+function activeTabChange(event) {
+  var navLinks = document.querySelectorAll(".main-nav .nav-link");
+  navLinks.forEach(function (linkElement) {
+    linkElement.classList.remove("active");
+  });
+  event.target.classList.add("active");
+}
+
+function loadingStart() {
+  document.getElementById("loading").classList.remove("invisible");
+}
+
+function loadingEnd() {
+  document.getElementById("loading").classList.add("invisible");
 }
 
 document.getElementById("search-link").addEventListener("click", loadSearchView);
 document.getElementById("add-customer-link").addEventListener("click", loadAddCustomerView);
-document.getElementById("home-link").addEventListener("click", loadEditCustomerView);
 
 function inputEventHandler(event) {
   if (event.target.matches("#search-input")) {
@@ -190,22 +252,32 @@ function clickEventHandler(event) {
   }
 
   if (event.target.matches(".edit-button")) {
-    loadView({
-      func: "loadEditCustomerView",
-      callback: afterEditViewLoads,
-      params: {
-        custId: event.target.dataset.customerId
-      }
-    });
+    loadEditCustomerView(event);
   }
 
   if (event.target.matches("#save-changes")) {
-    editCustomer(event);
+    editCustomer();
+  }
+
+  if (event.target.matches("#cancel-changes")) {
+    loadSearchView();
+  }
+
+  if (event.target.matches("#add-customer-button")) {
+    addCustomer();
+  }
+}
+
+function navClickEventHandler(event) {
+  if (event.target.matches(".nav-link")) {
+    activeTabChange(event);
   }
 }
 
 document.getElementById("app").addEventListener("input", inputEventHandler);
-document.getElementById("app").addEventListener("click", clickEventHandler);</script>
+document.getElementById("app").addEventListener("click", clickEventHandler);
+document.getElementById("navigation").addEventListener("click", navClickEventHandler);
+document.addEventListener("DOMContentLoaded", loadSearchView);</script>
 </body>
 
 </html>

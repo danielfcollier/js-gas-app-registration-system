@@ -1,11 +1,15 @@
-<h1>Search</h1>
+<h4>Search</h4>
 
-
-<div class="mb-3">
-    <input type="text" class="form-control" id="search-input" placeholder="search...">
+<div class="form-group">
+    <div class="input-group mb-3">
+        <input type="text" class="form-control" id="search-input" placeholder="search...">
+        <div class="input-group-append">
+            <span class="input-group-text" id="search-counter"></span>
+        </div>
+    </div>
 </div>
 
-<table class="table table-striped">
+<table class="table table-striped table-sm">
     <thead>
         <tr>
             <th scope="col">#</th>
@@ -25,12 +29,12 @@
         <th class="customerId" scope="row"></th>
         <td class="firstName"></td>
         <td class="lastName"></td>
-        <td><button type="button" class="btn btn-outline-dark edit-button">Edit</button></td>
+        <td><button type="button" class="btn btn-outline-dark edit-button btn-sm">Edit</button></td>
         <td>
             <div class="btn-group" role="group">
-                <button type="button" class="btn btn-danger delete-button d-none">Confirm</button>
-                <button type="button" class="btn btn-outline-dark before-delete-button" data-button-state="delete">Delete</button>
-              </div>
+                <button type="button" class="btn btn-danger delete-button d-none btn-sm">Confirm</button>
+                <button type="button" class="btn btn-outline-dark before-delete-button btn-sm" data-button-state="delete">Delete</button>
+            </div>
         </td>
     </tr>
 </template>

@@ -13,37 +13,47 @@
         .nav-link {
             cursor: pointer;
         }
+
+        #loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 10000;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(255, 255, 255, 75%);
+        }
     </style>
     <title>Hello, world!</title>
 </head>
 
 <body>
+
     <div class="container">
-
-
-        <ul class="nav nav-tabs">
-            <li class="nav-item">
-                <div class="nav-link active" id="home-link">Home</a>
-            </li>
-            <li class="nav-item">
-                <div class="nav-link" id="search-link">Search Customer</div></a>
-            </li>
-            <li class="nav-item">
-                <div class="nav-link" id="add-customer-link">Add Customer</a>
-            </li>
-            <!-- Bootstrap Template
+        <nav id="navigation" class="mb-3">
+            <ul class="nav nav-tabs main-nav">
+                <li class="nav-item">
+                    <div class="nav-link active" id="search-link">Find Customer</div></a>
+                </li>
+                <li class="nav-item">
+                    <div class="nav-link" id="add-customer-link">Add Customer</a>
+                </li>
+                <!-- Bootstrap Template
                         <li class="nav-item">
                             <a class="nav-link" href="#">Link</a>
                         </li>
                     -->
-            <li class="nav-item">
-                <div class="nav-link disabled" tabindex="-1" aria-disabled="true">Disabled</a>
-            </li>
-        </ul>
-
+            </ul>
+        </nav>
     </div>
 
     <div id="app"> </div>
+
+    <div id="loading" class="d-flex justify-content-center align-items-center invisible">
+        <div class="spinner-grow" style="width: 3rem; height: 3rem;" role="status">
+            <span class="sr-only"></span>
+        </div>
+    </div>
 
     <!-- Optional JavaScript; choose one of the two! -->
 
@@ -65,15 +75,20 @@
         function loadView(options) {
             const id = options.id || "app";
             const callback = options.callback || function () { };
+
+            loadingStart();
             google.script.run.withSuccessHandler(html => {
                 document.getElementById(id).innerHTML = html;
+                loadingEnd();
                 callback(options.params || null);
             })[options.func]();
         }
 
         function setDataForSearch() {
+            loadingStart();
             google.script.run.withSuccessHandler(dataReturned => {
                 data = dataReturned.slice();
+                loadingEnd();
             }).getDataForSearch();
         }
 
@@ -89,6 +104,9 @@
                     });
                 });
             });
+
+
+            document.getElementById("search-counter").textContent = "0";
 
             const searchResultsBox = document.getElementById("search-results");
             const templateBox = document.getElementById("row-template");
@@ -129,22 +147,25 @@
 
         function deleteCustomer(event) {
             const custId = event.target.dataset.customerId.toString().toLowerCase();
+            loadingStart();
             google.script.run.withSuccessHandler(() => {
                 event.target.closest(".result-box").remove();
                 const ids = data.map(r => r[0].toString().toLowerCase());
                 const index = ids.indexOf(custId);
                 data.splice(index, 1);
+                loadingEnd();
             }).deleteById(custId);
         }
 
         function afterEditViewLoads(params) {
             // custId: event.target.dataset.customerId
+            loadingStart();
             document.getElementById("customer-id").value = params.custId;
             google.script.run.withSuccessHandler(customerInfo => {
                 document.getElementById("first-name").value = customerInfo.firstName;
                 document.getElementById("last-name").value = customerInfo.lastName;
                 document.getElementById("phone-number").value = customerInfo.phoneNumber;
-
+                loadingEnd();
             }).getCustomerById(params.custId);
         }
 
@@ -154,13 +175,45 @@
             customerInfo.firstName = document.getElementById("first-name").value;
             customerInfo.lastName = document.getElementById("last-name").value;
             customerInfo.phoneNumber = document.getElementById("phone-number").value;
+
+            loadingStart();
             google.script.run.withSuccessHandler(result => {
+
+                document.getElementById("save-success-alert").classList.remove("invisible");
+                setTimeout(() => {
+                    document.getElementById("save-success-alert").classList.add("invisible");
+                    document.getElementById("first-name").value = "";
+                    document.getElementById("last-name").value = "";
+                    document.getElementById("phone-number").value = "";
+                    loadingEnd();
+                    loadSearchView();
+                }, 4000);
+
+            }).editCustomerById(customerInfo);
+        }
+
+        function addCustomer() {
+            const customerInfo = {};
+
+            customerInfo.firstName = document.getElementById("first-name").value;
+            customerInfo.lastName = document.getElementById("last-name").value;
+            customerInfo.phoneNumber = document.getElementById("phone-number").value;
+
+            loadingStart();
+            google.script.run.withSuccessHandler(result => {
+
+                document.getElementById("first-name").value = "";
+                document.getElementById("last-name").value = "";
+                document.getElementById("phone-number").value = "";
+
                 document.getElementById("save-success-alert").classList.remove("invisible");
                 setTimeout(() => {
                     document.getElementById("save-success-alert").classList.add("invisible");
                 }, 4000);
-            }).editCustomerById(customerInfo);
+                loadingEnd();
+            }).addCustomer(customerInfo);
         }
+
 
         function loadSearchView() {
             loadView({ func: "loadSearchView", callback: setDataForSearch });
@@ -170,13 +223,37 @@
             loadView({ func: "loadAddCustomerView" });
         }
 
-        function loadEditCustomerView() {
-            loadView({ func: "loadEditCustomerView" });
+        function loadEditCustomerView(event) {
+            loadView({
+                func: "loadEditCustomerView",
+                callback: afterEditViewLoads,
+                params: {
+                    custId: event.target.dataset.customerId
+                }
+            });
+        }
+
+        function activeTabChange(event) {
+            const navLinks = document.querySelectorAll(".main-nav .nav-link");
+
+            navLinks.forEach(linkElement => {
+                linkElement.classList.remove("active");
+            });
+
+            event.target.classList.add("active");
+        }
+
+        function loadingStart() {
+            document.getElementById("loading").classList.remove("invisible");
+        }
+
+
+        function loadingEnd() {
+            document.getElementById("loading").classList.add("invisible");
         }
 
         document.getElementById("search-link").addEventListener("click", loadSearchView);
         document.getElementById("add-customer-link").addEventListener("click", loadAddCustomerView);
-        document.getElementById("home-link").addEventListener("click", loadEditCustomerView);
 
         function inputEventHandler(event) {
             if (event.target.matches("#search-input")) {
@@ -194,23 +271,32 @@
             }
 
             if (event.target.matches(".edit-button")) {
-                loadView({
-                    func: "loadEditCustomerView",
-                    callback: afterEditViewLoads,
-                    params: {
-                        custId: event.target.dataset.customerId
-                    }
-                });
+                loadEditCustomerView(event)
             }
 
             if (event.target.matches("#save-changes")) {
-                editCustomer(event);
+                editCustomer();
+            }
+
+            if (event.target.matches("#cancel-changes")) {
+                loadSearchView();
+            }
+
+            if (event.target.matches("#add-customer-button")) {
+                addCustomer();
+            }
+        }
+
+        function navClickEventHandler(event) {
+            if (event.target.matches(".nav-link")) {
+                activeTabChange(event);
             }
         }
 
         document.getElementById("app").addEventListener("input", inputEventHandler);
         document.getElementById("app").addEventListener("click", clickEventHandler);
-
+        document.getElementById("navigation").addEventListener("click", navClickEventHandler);
+        document.addEventListener("DOMContentLoaded", loadSearchView);
     </script>
 </body>
 

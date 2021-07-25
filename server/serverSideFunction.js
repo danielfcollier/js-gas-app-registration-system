@@ -41,3 +41,22 @@ function editCustomerById(customerInfo) {
     ]]);
     return true;
 }
+
+function addCustomer(customerInfo) {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const ws = ss.getSheetByName("Customers");
+    const idArray = ws.getRange(2, 1, ws.getLastRow() - 1, 1).getValues();
+    let maxNum = 0;
+    idArray.forEach(r => {
+        maxNum = r[0] > maxNum ? r[0] : maxNum;
+    });
+
+    const newId = maxNum + 1;
+
+    ws.appendRow([
+        newId,
+        customerInfo.firstName,
+        customerInfo.lastName,
+        customerInfo.phoneNumber
+    ]);
+}
