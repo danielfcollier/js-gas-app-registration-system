@@ -3,7 +3,7 @@ const path = require("path");
 
 const dirNameServer = "server";
 const dirNameClient = "client";
-const dirNameGoogle = "gas";
+const dirNameGoogle = ".gas";
 const dirNameDist = "dist";
 
 const dirDist= fs.readdirSync(path.resolve(__dirname, dirNameDist));

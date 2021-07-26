@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "[\"$(ls -A dist)\"] && rm dist/* || echo '' && parcel build client/*.html --no-minify --no-cache --no-source-maps && rm dist/*.js && rm dist/*.css && node utils.js && clasp push",
+    "build": "parcel build client/*.html --no-minify --no-cache --no-source-maps && rm dist/*.js && rm .gas/*.js && node utils.js && rm dist/* && rmdir dist && clasp push",
     "watch": "nodemon --watch client --watch server --exec \"npm run build\" --ext js,html,scss,css"
   },
   "keywords": [],
